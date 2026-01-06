@@ -1,94 +1,80 @@
-import asyncio
-import yaml
-import time
-from datetime import datetime
+import random
+import os
 from playwright.async_api import async_playwright
 
-# --- КОНФИГУРАЦИЯ ---
-CONFIG_FILE = "channels.yaml"
-OUTPUT_FILE = "playlist.m3u8"
-# --- КОНФИГУРАЦИЯ ---
+# КОНФИГУРАЦИЯ
+CHANNELS = {
+    "Первый канал": "smotrettv.com",
+    "Россия 1": "smotrettv.com"
+}
 
-async def get_stream_url(page_url):
-    """
-    Запускает скрытый браузер для захвата актуальной ссылки с токеном.
-    """
+# Шаблон ссылки для DRM-play (добавлены параметры для стабильности)
+STREAM_BASE_URL = "https://server.smotrettv.com/{channel_id}.m3u8?token={token}"
+
+async def get_tokens_and_make_playlist():
     async with async_playwright() as p:
-        # Запуск браузера в безголовом режиме (невидимый)
+        # Для работы на ПК лучше ставить headless=False, чтобы видеть процесс
         browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
+        context = await browser.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         page = await context.new_page()
-        
-        found_url = None
 
-        # Перехватываем все сетевые запросы
-        async def handle_request(request):
-            nonlocal found_url
-            # Ищем ссылку, содержащую .m3u8 и параметр token (признак IPTV-потока)
-            if ".m3u8" in request.url and "token=" in request.url:
-                # Берем первую найденную ссылку основного потока
-                if not found_url and "index" not in request.url: 
-                    found_url = request.url
-
-        page.on("request", handle_request)
+        login = os.getenv('LOGIN', 'ВАШ_ЛОГИН')
+        password = os.getenv('PASSWORD', 'ВАШ_ПАРОЛЬ')
 
         try:
-            print(f"  > Открытие страницы: {page_url}")
-            await page.goto(page_url, wait_until="networkidle", timeout=30000)
-            # Эмулируем клик для активации плеера
-            await page.mouse.click(500, 300) 
-            await asyncio.sleep(5) # Ждем 5 секунд на подгрузку потока
+            await page.goto("smotrettv.com")
+            await page.fill('input[name="email"]', login)
+            await page.fill('input[name="password"]', password)
+            await page.click('button[type="submit"]')
+            await asyncio.sleep(5)
         except Exception as e:
-            print(f"  [ОШИБКА] При парсинге страницы: {e}")
-        finally:
-            await browser.close()
+            print(f"Ошибка авторизации: {e}")
+
+        # Начало формирования заголовка для DRM-play
+        playlist_data = "#EXTM3U\n"
         
-        return found_url
+        for name, url in CHANNELS.items():
+            print(f"Обработка: {name}...")
+            current_token = None
 
-def load_channels():
-    """Загружает список каналов из YAML-файла."""
-    try:
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            return yaml.safe_load(f)["channels"]
-    except FileNotFoundError:
-        print(f"Ошибка: Файл '{CONFIG_FILE}' не найден.")
-        exit()
-    except yaml.YAMLError as e:
-        print(f"Ошибка чтения YAML-файла: {e}")
-        exit()
+            def handle_request(request):
+                nonlocal current_token
+                if "token=" in request.url:
+                    try:
+                        current_token = request.url.split("token=")[1].split("&")[0]
+                    except:
+                        pass
 
-async def generate_m3u_playlist():
-    """Основная функция генерации плейлиста."""
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] Запуск генерации плейлиста...")
-    channels = load_channels()
-    m3u_content = "#EXTM3U\n"
+            page.on("request", handle_request)
+            
+            try:
+                await page.goto(url, wait_until="networkidle", timeout=30000)
+                await asyncio.sleep(8) 
 
-    for channel in channels:
-        name = channel["name"]
-        url = channel["url"]
-        referer = channel.get("referer", "smotret.tv") # Домен по умолчанию
+                if current_token:
+                    channel_id = url.split("/")[-1]
+                    stream_url = STREAM_BASE_URL.format(channel_id=channel_id, token=current_token)
+                    
+                    # ФОРМАТ ДЛЯ DRM-PLAY
+                    playlist_data += f'#EXTINF:-1, {name}\n'
+                    # Добавляем свойства для корректного подхвата плеером DRM-play
+                    playlist_data += f'#KODIPROP:inputstream.adaptive.license_type=widevine\n'
+                    playlist_data += f'#EXTVLCOPT:http-user-agent=Mozilla/5.0\n'
+                    playlist_data += f'{stream_url}\n'
+                    print(f"Токен получен.")
+                else:
+                    print(f"Токен не найден для {name}.")
 
-        stream_url = await get_stream_url(url)
+            except Exception as e:
+                print(f"Ошибка на {name}: {e}")
+
+        # Сохраняем результат
+        with open("playlist.m3u8", "w", encoding="utf-8") as f:
+            f.write(playlist_data)
         
-        if stream_url:
-            # Добавляем в плейлист: #EXTINF, URL, и Referer для совместимости с плеерами (VLC, OTT)
-            m3u_content += f'#EXTINF:-1 group-title="TV",{name}\n'
-            m3u_content += f'#EXTVLCOPT:http-referrer={referer}\n'
-            # Используем формат URL|Referer= для универсальности
-            m3u_content += f'{stream_url}|Referer={referer}\n'
-            print(f"  [OK] Ссылка для '{name}' получена.")
-        else:
-            print(f"  [ПРОПУСК] Не удалось получить ссылку для '{name}'.")
+        print("\nПлейлист для DRM-play готов.")
+        await browser.close()
 
-    # Сохраняем результат
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        f.write(m3u_content)
-    
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] Плейлист '{OUTPUT_FILE}' успешно обновлен.")
-
-if __name__ == "__main__":
-    # Запускаем один раз для создания файла
-    asyncio.run(generate_m3u_playlist())
-    print("\nСкрипт завершил работу. Если вам нужно автообновление, используйте 'updater.py' или 'server.py'.")
+if name == "main":
+    asyncio.run(get_tokens_and_make_playlist())
+ter.py' или 'server.py'.")
