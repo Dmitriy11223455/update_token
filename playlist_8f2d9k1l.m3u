@@ -1,5 +1,1 @@
 #EXTM3U
-#EXTINF:-1, Звезда
-#KODIPROP:inputstream.adaptive.license_type=widevine
-#EXTVLCOPT:http-user-agent=Mozilla/5.0
-server.smotrettv.com310.m3u8?token=1767701463_aaa863888cbba70770b062678a7708e0e644dce2c4b7765bb010f49c0e3f8536
