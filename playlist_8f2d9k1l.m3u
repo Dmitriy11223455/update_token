@@ -1,1 +1,9 @@
 #EXTM3U
+#EXTINF:-1, Звезда
+#KODIPROP:inputstream.adaptive.license_type=widevine
+#EXTVLCOPT:http-user-agent=Mozilla/5.0
+https://server.smotrettv.com/310.m3u8?token=1767707975_06eb342a2e7ca04312f2a22ec17bac3f8cc83f48a1784049f8b7e2a47d88d6d0
+#EXTINF:-1, ТНТ
+#KODIPROP:inputstream.adaptive.license_type=widevine
+#EXTVLCOPT:http-user-agent=Mozilla/5.0
+https://server.smotrettv.com/329.m3u8?token=1767707989_60a061d9e79cbbff013aff2bcc5177f98a2f916781a09767d6d94958f839b98b
