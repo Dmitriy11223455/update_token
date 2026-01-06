@@ -1,1 +1,5 @@
 #EXTM3U
+#EXTINF:-1, Россия 1
+#KODIPROP:inputstream.adaptive.license_type=widevine
+#EXTVLCOPT:http-user-agent=Mozilla/5.0
+https://server.smotrettv.com/784.m3u8?token=yabs.NzIwNTc2MTE1NDExNzYwODc%3D
