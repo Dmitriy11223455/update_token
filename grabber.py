@@ -14,7 +14,7 @@ CHANNELS = {
 }
 
 # Шаблон: цифры перед названием в ссылке станут ID потока
-STREAM_BASE_URL = "https://server.smotrettv.com{channel_id}.m3u8?token={token}"
+STREAM_BASE_URL = "https://server.smotrettv.com/{channel_id}.m3u8?token={token}"
 
 async def get_tokens_and_make_playlist():
     async with async_playwright() as p:
