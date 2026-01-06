@@ -1,5 +1,1 @@
 #EXTM3U
-#EXTINF:-1, ТНТ
-#KODIPROP:inputstream.adaptive.license_type=widevine
-#EXTVLCOPT:http-user-agent=Mozilla/5.0
-https://server.smotrettv.com329.m3u8?token=1767703965_010d882ac1d98a09485da8f93b65dcca3d2c09633c3a2f654f62096e8ad857c7
