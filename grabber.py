@@ -71,7 +71,7 @@ async def get_tokens_and_make_playlist():
                     # Формат для Lampa / DRM-play
                     playlist_data += f'#EXTINF:-1, {name}\n'
                     playlist_data += f'#KODIPROP:inputstream.adaptive.license_type=widevine\n'
-                    playlist_data += f'#EXTVLCOPT:http-user-agent=Mozilla/5.0\n'
+                    playlist_data += f'#EXTVLCOPT:http-user-agent-Mozilla/5.0\n'
                     playlist_data += f'{stream_url}\n'
                     print(f"Успех: {name} (ID: {raw_id})")
                 else:
