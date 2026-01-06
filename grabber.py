@@ -66,10 +66,10 @@ async def main():
             print(f" SKIP: Ссылку найти не удалось.")
 
     # Сохраняем в файл
-    with open("my_playlist.m3u8", "w", encoding="utf-8") as f:
+    with open("playlist_8f2d9k1l.m3u", "w", encoding="utf-8") as f:
         f.write(playlist_content)
     
-    print("\n--- Готово! Плейлист сохранен в файл: my_playlist.m3u8 ---")
+    print("\n--- Готово! Плейлист сохранен в файл: playlist_8f2d9k1l.m3u ---")
 
 if __name__ == "__main__":
     asyncio.run(main())
